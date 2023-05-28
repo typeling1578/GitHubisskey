@@ -1,0 +1,22 @@
+{
+  "name": "githubisskey",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.mjs",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/typeling1578/githubisskey.git"
+  },
+  "author": "typeling1578",
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/typeling1578/githubisskey/issues"
+  },
+  "homepage": "https://github.com/typeling1578/githubisskey#readme",
+  "dependencies": {
+    "got": "^12.6.0"
+  }
+}
