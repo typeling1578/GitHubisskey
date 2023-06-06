@@ -95,7 +95,7 @@ while (true) {
                 ).json();
                 for (let event of response) {
                     if (event["type"] != "PushEvent") continue;
-                    //if (!event["public"]) continue;
+                    if (!event["public"]) continue;
                     if (
                         (todayDate.getTime() -
                         (new Date(event["created_at"])).getTime()) > 86400000 /*24 hours*/
