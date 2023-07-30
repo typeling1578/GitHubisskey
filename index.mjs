@@ -1,5 +1,5 @@
 import got from "got";
-import { TIMEZONE, GITHUB_PERSONAL_ACCESS_TOKEN, MISSKEY_ENDPOINT, MISSKEY_TOKEN } from "./config.mjs";
+import { TIMEZONE, IGNORE_REPOS, GITHUB_PERSONAL_ACCESS_TOKEN, MISSKEY_ENDPOINT, MISSKEY_TOKEN } from "./config.mjs";
 import log from "./log.mjs";
 import sleep from "./sleep.mjs";
 
@@ -97,6 +97,7 @@ while (true) {
                 ).json();
                 for (let event of response) {
                     if (event["type"] != "PushEvent") continue;
+                    if (IGNORE_REPOS.includes(event["repo"]["name"])) continue;
                     if (!event["public"]) continue;
                     if (
                         (todayDate.getTime() -
