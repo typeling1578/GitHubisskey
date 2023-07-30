@@ -1,7 +1,9 @@
 import got from "got";
-import { GITHUB_PERSONAL_ACCESS_TOKEN, MISSKEY_ENDPOINT, MISSKEY_TOKEN } from "./config.mjs";
+import { TIMEZONE, GITHUB_PERSONAL_ACCESS_TOKEN, MISSKEY_ENDPOINT, MISSKEY_TOKEN } from "./config.mjs";
 import log from "./log.mjs";
 import sleep from "./sleep.mjs";
+
+process.env.TZ = TIMEZONE ?? process.env.TZ;
 
 const GITHUB_API_ENDPOINT_BASE = "https://api.github.com";
 const GITHUB_API_HEADERS = {
