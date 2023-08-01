@@ -88,7 +88,7 @@ while (true) {
                             limit: 5,
                             calculateDelay: ({computedValue}) => {
                                 if (computedValue !== 0) {
-                                    log.warn(`Failed to create notes to Misskey, retry after ${computedValue / 1000} second(s)...`);
+                                    log.warn(`Failed to get user events, retry after ${computedValue / 1000} second(s)...`);
                                 }
                                 return computedValue;
                             },
