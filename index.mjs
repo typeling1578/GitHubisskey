@@ -1,4 +1,5 @@
 import * as config from "./config.mjs";
+import locales from "./locales.mjs";
 
 import log from "./log.mjs";
 import sleep from "./sleep.mjs";
@@ -135,14 +136,12 @@ commit ${commit.sha}
                 },
                 body: JSON.stringify({
                     i: config.MISSKEY_TOKEN,
-                    text:
-`昨日はGitHubに ${yesterday_commits.length} 回コミットしました。
-
-内訳
-${Object.keys(commit_count_per_repository).map(key => `${key}: ${commit_count_per_repository[key]}`).join("\n")}
-
-https://github.com/${github_user.login}
-`,
+                    text: locales.get(
+                        "note_body",
+                        yesterday_commits.length,
+                        Object.keys(commit_count_per_repository).map(key => `${key}: ${commit_count_per_repository[key]}`).join("\n"),
+                        `https://github.com/${github_user.login}`,
+                    ),
                     visibility: "home",
                 }),
                 retry: {
