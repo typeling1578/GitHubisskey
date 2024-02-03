@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/typeling1578/githubisskey#readme",
   "dependencies": {
+    "dotenv": "^16.4.1",
     "got": "^12.6.0"
   }
 }

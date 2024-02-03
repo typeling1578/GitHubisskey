@@ -1,45 +1,43 @@
-import got from "got";
-import { TIMEZONE, IGNORE_REPOS, GITHUB_PERSONAL_ACCESS_TOKEN, MISSKEY_ENDPOINT, MISSKEY_TOKEN } from "./config.mjs";
+import * as config from "./config.mjs";
+
 import log from "./log.mjs";
 import sleep from "./sleep.mjs";
 
-process.env.TZ = TIMEZONE ?? process.env.TZ;
+import got from "got";
 
-const GITHUB_API_ENDPOINT_BASE = "https://api.github.com";
 const GITHUB_API_HEADERS = {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}`,
+    "Authorization": `Bearer ${config.GITHUB_PERSONAL_ACCESS_TOKEN}`,
 };
 
-log.info("Getting user info...")
-const GITHUB_ACCOUNT = await (async () => {
-    const response = await got(
-        `${GITHUB_API_ENDPOINT_BASE}/user`,
-        {
-            method: "GET",
-            headers: GITHUB_API_HEADERS,
-        },
-    ).json();
-    return response["login"];
-})();
-log.info("GitHub Account:", GITHUB_ACCOUNT);
+log.info("Getting user info...");
+const github_user = await got(
+    "https://api.github.com/user",
+    {
+        method: "GET",
+        headers: GITHUB_API_HEADERS,
+    },
+).json();
+
+log.info("GitHub User:", github_user.login);
 
 log.info("Getting user emails...");
-const GITHUB_ACCOUNT_EMAILS = await (async () => {
-    const response = await got(
-        `${GITHUB_API_ENDPOINT_BASE}/user/emails`,
-        {
-            method: "GET",
-            headers: GITHUB_API_HEADERS,
-        },
-    ).json();
-    return response.map(obj => obj.email);
-})();
-log.info("GitHub Account Emails:", GITHUB_ACCOUNT_EMAILS.join(", "));
+const github_user_emails = await got(
+    "https://api.github.com/user/emails",
+    {
+        method: "GET",
+        headers: GITHUB_API_HEADERS,
+    },
+).json();
+
+log.info(
+    "GitHub User Emails:",
+    github_user_emails.map(email_info => email_info.email).join(", ")
+);
 
 log.info("Test accessing user events...");
 await got(
-    `${GITHUB_API_ENDPOINT_BASE}/users/${GITHUB_ACCOUNT}/events`,
+    `https://api.github.com/users/${github_user.login}/events`,
     {
         method: "GET",
         headers: GITHUB_API_HEADERS,
@@ -48,39 +46,41 @@ await got(
 
 log.info("Test accessing Misskey API...");
 await got(
-    `${MISSKEY_ENDPOINT}/api/meta`,
+    `${config.MISSKEY_ENDPOINT}/api/meta`,
     {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
         },
         body: JSON.stringify({
-            i: MISSKEY_TOKEN,
+            i: config.MISSKEY_TOKEN,
         }),
     }
 );
 
 log.info("Ready 🎉");
+log.info("Waiting for the date to change...");
 
-let oldDate = null;
+let old_datetime = null;
 while (true) {
-    const nowDate = new Date();
-    if (oldDate &&
-        oldDate.getTime() < nowDate.getTime() &&
-        oldDate.getDate() != nowDate.getDate()
+    const now_datetime = new Date();
+    if (
+        old_datetime &&
+        old_datetime.getTime() < now_datetime.getTime() &&
+        old_datetime.getDate() !== now_datetime.getDate()
     ) {
         log.info("The date has changed.");
 
-        const todayDate = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate());
+        const today_date = new Date(now_datetime.getFullYear(), now_datetime.getMonth(), now_datetime.getDate());
 
         try {
-            let yesterdayCommits = [];
-            let commitCountPerRepository = {};
+            const yesterday_commits = [];
+            const commit_count_per_repository = {};
             let page = 1;
             while (true) {
-                log.info("Getting user events...");
-                const response = await got(
-                    `${GITHUB_API_ENDPOINT_BASE}/users/${GITHUB_ACCOUNT}/events?page=${page}`,
+                log.info(`Getting user events... (page: ${page})`);
+                const events = await got(
+                    `https://api.github.com/users/${github_user.login}/events?page=${page}`,
                     {
                         method: "GET",
                         headers: GITHUB_API_HEADERS,
@@ -93,54 +93,53 @@ while (true) {
                                 return computedValue;
                             },
                         },
-                    },
+                    }
                 ).json();
-                for (let event of response) {
-                    if (event["type"] != "PushEvent") continue;
-                    if (IGNORE_REPOS.includes(event["repo"]["name"])) continue;
-                    if (!event["public"]) continue;
-                    if (
-                        (todayDate.getTime() -
-                        (new Date(event["created_at"])).getTime()) > 86400000 /*24 hours*/
-                    ) continue;
+                for (const event of events) {
+                    if (event.type !== "PushEvent") continue;
+                    if (config.IGNORE_REPOS.includes(event.repo.name)) continue;
+                    if (!event.public) continue;
+                    if ((today_date.getTime() - (new Date(event.created_at)).getTime()) > 86400000 /*24 hours*/)
+                        continue;
 
-                    const commits = event["payload"]["commits"].filter(commit => GITHUB_ACCOUNT_EMAILS.includes(commit["author"]["email"]));
+                    const commits = event.payload.commits.filter(commit =>
+                        github_user_emails.map(email_info => email_info.email)
+                            .includes(commit.author.email)
+                    );
                     for (const commit of commits) {
                         log.info(
 `Commit found
-[${event["repo"]["name"]}:${event["payload"]["ref"]}]
-commit ${commit["sha"]}
+[${event.repo.name}:${event.payload.ref}]
+commit ${commit.sha}
 
-    ${commit["message"].replaceAll("\n", "\n    ")}
+    ${commit.message.replaceAll("\n", "\n    ")}
 `
                         );
-                        yesterdayCommits.push(commit);
-                        if (!commitCountPerRepository[event["repo"]["name"]]) {
-                            commitCountPerRepository[event["repo"]["name"]] = 0;
+                        yesterday_commits.push(commit);
+                        if (!commit_count_per_repository[event.repo.name]) {
+                            commit_count_per_repository[event.repo.name] = 0;
                         }
-                        commitCountPerRepository[event["repo"]["name"]]++;
+                        commit_count_per_repository[event.repo.name]++;
                     }
                 }
-                if (
-                    (todayDate.getTime() -
-                    (new Date(response.slice(-1)[0]["created_at"])).getTime()) > 86400000 /*24 hours*/
-                ) break;
+                if ((today_date.getTime() - (new Date(events.slice(-1)[0].created_at)).getTime()) > 86400000 /*24 hours*/)
+                    break;
                 page++;
             }
 
             log.info("Notes to Misskey...");
-            await got(`${MISSKEY_ENDPOINT}/api/notes/create`, {
+            await got(`${config.MISSKEY_ENDPOINT}/api/notes/create`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    i: MISSKEY_TOKEN,
+                    i: config.MISSKEY_TOKEN,
                     text:
-`昨日はGitHubに ${yesterdayCommits.length} 回コミットしました。
+`昨日はGitHubに ${yesterday_commits.length} 回コミットしました。
 
 内訳
-${Object.keys(commitCountPerRepository).map(key => `${key}: ${commitCountPerRepository[key]}`).join("\n")}
+${Object.keys(commit_count_per_repository).map(key => `${key}: ${commit_count_per_repository[key]}`).join("\n")}
 
 https://github.com/${GITHUB_ACCOUNT}
 `,
@@ -161,6 +160,6 @@ https://github.com/${GITHUB_ACCOUNT}
             console.error(e);
         }
     }
-    oldDate = nowDate;
+    old_datetime = now_datetime;
     await sleep(1000);
 }
