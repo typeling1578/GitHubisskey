@@ -1,0 +1,14 @@
+[Unit]
+Description=Githubisskey daemon
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=githubisskey
+Group=githubisskey
+ExecStart=npm run start
+WorkingDirectory=/home/githubisskey/Githubisskey
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target
