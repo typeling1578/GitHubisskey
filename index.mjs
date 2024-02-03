@@ -141,7 +141,7 @@ commit ${commit.sha}
 内訳
 ${Object.keys(commit_count_per_repository).map(key => `${key}: ${commit_count_per_repository[key]}`).join("\n")}
 
-https://github.com/${GITHUB_ACCOUNT}
+https://github.com/${github_user.login}
 `,
                     visibility: "home",
                 }),
