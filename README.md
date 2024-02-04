@@ -1,6 +1,6 @@
 # GitHubisskey
 
-***Post the number of commits to GitHub with Misskey.***
+***Post the number of daily commits to GitHub to Misskey.***
 
 ### ScreenShot
 ![](https://github.com/typeling1578/GitHubisskey/assets/59644555/79372aae-ca08-48a8-9052-ecfc0adab7da)
